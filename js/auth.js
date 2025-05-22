@@ -1,29 +1,39 @@
-const SHEET_URL = "https://google-sheet-proxy.govindsaini355.workers.dev/";
+const WORKER_URL = "https://googlesheet-proxy.govindsaini355.workers.dev/";
 
-document.addEventListener("DOMContentLoaded", () => {
-  const loginForm = document.getElementById("loginForm");
+async function login(event) {
+  event.preventDefault();
 
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = loginForm.email.value.trim();
-    const password = loginForm.password.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-    try {
-      const res = await fetch(`${SHEET_URL}?sheet=Users&login=true&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
-      const result = await res.json();
+  const res = await fetch(`${WORKER_URL}?sheet=Users&login=true&email=${email}&password=${password}`);
+  const data = await res.json();
 
-      if (result.success) {
-        localStorage.setItem("user", JSON.stringify(result.user));
+  if (data.success) {
+    localStorage.setItem("user", JSON.stringify(data.user));
 
-        // Role-based redirection
-        const redirectPage = result.user.role === "Admin" ? "dashboard.html" : "leads.html";
-        window.location.href = redirectPage;
-      } else {
-        alert("Login failed: " + (result.error || "Invalid credentials"));
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      alert("Network error. Please try again.");
+    if (data.user.role === "Admin") {
+      window.location.href = "dashboard.html";
+    } else if (data.user.role === "User") {
+      window.location.href = "leads.html";
+    } else {
+      alert("Unknown role: " + data.user.role);
     }
-  });
-});
+  } else {
+    alert("Login failed: Invalid credentials");
+  }
+}
+
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "index.html";
+}
+
+function checkAuth(allowedRoles) {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user || !allowedRoles.includes(user.role)) {
+    alert("Unauthorized. Redirecting to login.");
+    window.location.href = "index.html";
+  }
+  return user;
+}
