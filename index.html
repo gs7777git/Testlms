@@ -3,24 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login | CRM</title>
-  <script src="js/auth.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>CRM Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-light d-flex justify-content-center align-items-center vh-100">
-  <div class="card shadow-lg p-4" style="width: 24rem;">
-    <h4 class="text-center mb-4">CRM Login</h4>
-    <form onsubmit="login(event)">
-      <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input type="email" class="form-control" id="email" required />
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="password" required />
-      </div>
-      <button type="submit" class="btn btn-primary w-100">Login</button>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+  <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Welcome to CRM</h1>
+
+    <form id="loginForm" class="space-y-4">
+      <input type="email" id="email" placeholder="Email" required
+             class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      
+      <input type="password" id="password" placeholder="Password" required
+             class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      
+      <button type="submit"
+              class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">
+        Login
+      </button>
     </form>
+
+    <p id="error" class="text-red-500 text-sm mt-4 hidden text-center">Login failed</p>
   </div>
+
+  <script src="./js/auth.js"></script>
 </body>
 </html>
