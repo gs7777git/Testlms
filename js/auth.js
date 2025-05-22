@@ -1,12 +1,12 @@
 const SHEET_URL = "https://google-sheet-proxy.govindsaini355.workers.dev/";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("loginForm");
+  const loginForm = document.getElementById("loginForm");
 
-  form.addEventListener("submit", async (e) => {
+  loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = form.email.value.trim();
-    const password = form.password.value.trim();
+    const email = loginForm.email.value.trim();
+    const password = loginForm.password.value.trim();
 
     try {
       const res = await fetch(`${SHEET_URL}?sheet=Users&login=true&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
@@ -14,13 +14,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (result.success) {
         localStorage.setItem("user", JSON.stringify(result.user));
-        window.location.href = "dashboard.html";
+
+        // Role-based redirection
+        const redirectPage = result.user.role === "Admin" ? "dashboard.html" : "leads.html";
+        window.location.href = redirectPage;
       } else {
-        alert("Login failed: " + result.error);
+        alert("Login failed: " + (result.error || "Invalid credentials"));
       }
     } catch (err) {
-      alert("Network or server error.");
-      console.error(err);
+      console.error("Login error:", err);
+      alert("Network error. Please try again.");
     }
   });
 });
