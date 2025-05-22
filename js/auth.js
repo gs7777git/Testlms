@@ -1,31 +1,26 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyGSkfDfkhtluqeHaN-CpZ68z-RU_OhNzz_XD5UTTjlymX3YTkiYvfBoYmeIterQMIU/exec';
+const SHEET_URL = "https://google-sheet-proxy.govindsaini355.workers.dev/";
 
-function login() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const errorMsg = document.getElementById("errorMsg");
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("loginForm");
 
-  fetch(scriptURL, {
-    method: "POST",
-    body: JSON.stringify({
-      type: "login",
-      email: email,
-      password: password
-    }),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
-    .then(response => response.json())
-    .then(result => {
-      if (result.result === "success") {
-        localStorage.setItem("crm_user", email);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = form.email.value.trim();
+    const password = form.password.value.trim();
+
+    try {
+      const res = await fetch(`${SHEET_URL}?sheet=Users&login=true&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+      const result = await res.json();
+
+      if (result.success) {
+        localStorage.setItem("user", JSON.stringify(result.user));
         window.location.href = "dashboard.html";
       } else {
-        errorMsg.textContent = result.message;
+        alert("Login failed: " + result.error);
       }
-    })
-    .catch(() => {
-      errorMsg.textContent = "Login failed. Please try again.";
-    });
-}
+    } catch (err) {
+      alert("Network or server error.");
+      console.error(err);
+    }
+  });
+});
