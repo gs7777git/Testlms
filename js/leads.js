@@ -1,29 +1,54 @@
-const SHEET_URL = "https://google-sheet-proxy.govindsaini355.workers.dev/";
+document.addEventListener("DOMContentLoaded", async () => {
+  const user = checkAuth(["Admin", "User"]);
+  await loadLeads();
+  document.getElementById("lead-form").addEventListener("submit", addLead);
+});
 
 async function loadLeads() {
-  try {
-    const res = await fetch(`${SHEET_URL}?sheet=Leads`);
-    const leads = await res.json();
+  const res = await fetch(`${WORKER_URL}?sheet=Leads`);
+  const rows = await res.json();
 
-    const tableBody = document.querySelector("#leadsTable tbody");
-    tableBody.innerHTML = "";
+  const tableBody = document.getElementById("lead-table-body");
+  tableBody.innerHTML = "";
 
-    leads.forEach(lead => {
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${lead.name || ""}</td>
-        <td>${lead.email || ""}</td>
-        <td>${lead.phone || ""}</td>
-        <td>${lead.status || ""}</td>
-        <td>${lead.source || ""}</td>
-        <td>${lead.date || ""}</td>
-      `;
-      tableBody.appendChild(row);
-    });
-  } catch (err) {
-    console.error("Error loading leads:", err);
-    alert("Failed to load leads.");
-  }
+  rows.slice(1).forEach((row, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${row[0]}</td>
+      <td>${row[1]}</td>
+      <td>${row[2]}</td>
+      <td>${row[3]}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
 }
 
-document.addEventListener("DOMContentLoaded", loadLeads);
+async function addLead(e) {
+  e.preventDefault();
+  const name = document.getElementById("lead-name").value;
+  const email = document.getElementById("lead-email").value;
+  const phone = document.getElementById("lead-phone").value;
+  const source = document.getElementById("lead-source").value;
+
+  const payload = {
+    sheet: "Leads",
+    data: [name, email, phone, source]
+  };
+
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await res.json();
+
+  if (result.success) {
+    alert("Lead added successfully");
+    document.getElementById("lead-form").reset();
+    loadLeads();
+  } else {
+    alert("Error adding lead");
+  }
+}
