@@ -2,44 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Leads - CRM</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads | CRM</title>
+  <script defer src="auth.js"></script>
+  <script defer src="leads.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-  <div id="sidebar"></div>
-  <main>
-    <h1>Leads</h1>
-
-    <form id="leadForm">
-      <input type="text" id="name" placeholder="Name" required>
-      <input type="email" id="email" placeholder="Email" required>
-      <input type="text" id="phone" placeholder="Phone">
-      <input type="text" id="source" placeholder="Source">
-      <input type="text" id="status" placeholder="Status">
-      <textarea id="notes" placeholder="Notes"></textarea>
-      <button type="submit">Add Lead</button>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">CRM - Leads</a>
+      <div>
+        <button onclick="logout()" class="btn btn-outline-light">Logout</button>
+      </div>
+    </div>
+  </nav>
+  <div class="container mt-4">
+    <h3>Add New Lead</h3>
+    <form id="lead-form" class="row g-3 mb-4">
+      <div class="col-md-3">
+        <input type="text" id="lead-name" class="form-control" placeholder="Name" required />
+      </div>
+      <div class="col-md-3">
+        <input type="email" id="lead-email" class="form-control" placeholder="Email" required />
+      </div>
+      <div class="col-md-3">
+        <input type="tel" id="lead-phone" class="form-control" placeholder="Phone" required />
+      </div>
+      <div class="col-md-2">
+        <input type="text" id="lead-source" class="form-control" placeholder="Source" required />
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-success w-100">Add</button>
+      </div>
     </form>
-
-    <hr>
-
-    <h2>Leads List</h2>
-    <table id="leadsTable" border="1">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Source</th>
-          <th>Status</th>
-          <th>Notes</th>
-        </tr>
+    <h4>All Leads</h4>
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Source</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="lead-table-body"></tbody>
     </table>
-  </main>
-
-  <script src="js/main.js"></script>
-  <script src="js/leads.js"></script>
+  </div>
 </body>
 </html>
