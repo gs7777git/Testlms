@@ -1,0 +1,6 @@
+{
+  "name": "CRM Pro - Supabase Edition",
+  "description": "A professional Customer Relationship Management (CRM) web application using Supabase as its backend. Features lead management, user roles, activity tracking, and sales reports within a multi-organization structure.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
