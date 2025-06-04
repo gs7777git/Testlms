@@ -1,20 +1,27 @@
 
 import { createClient, Session, User as SupabaseAuthUser, PostgrestError } from '@supabase/supabase-js';
-import { UserProfile, Role, Lead, LeadStatus, Organization } from './types'; // Added Organization
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../constants';
+import { UserProfile, Role, Lead, LeadStatus, Organization } from './types'; // Adjusted path assuming types.ts is in the same root dir
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './constants'; // Adjusted path assuming constants.ts is in the same root dir
 
 // Initialize Supabase client
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// The constants file (constants.ts) already performs a check and alerts if these are missing.
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  // This is a fallback, primarily for type safety, as constants.ts should handle the user alert.
+  console.error("Supabase URL or Anon Key is undefined in api.ts. This should have been caught in constants.ts.");
+}
+
+export const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+
 
 export interface UserCredentials {
   email: string;
-  password?: string; 
+  password?: string;
 }
 
 export interface AdminRegistrationData extends UserCredentials {
   fullName: string;
   organizationName: string;
-  passwordInput: string; // Explicitly for registration, matches UserModal
+  passwordInput: string;
 }
 
 
@@ -52,17 +59,16 @@ export const authService = {
       await supabase.auth.signOut();
       throw new Error('Login failed: User profile is empty. Please contact support.');
     }
-    
+
     const userProfileWithRole: UserProfile = { ...profile, role: profile.role as Role };
 
     return { session: data.session, authUser: data.user, profile: userProfileWithRole };
   },
 
   registerAdminAndOrganization: async (registrationData: AdminRegistrationData): Promise<{ authUser: SupabaseAuthUser, organization: Organization, profile: UserProfile }> => {
-    // 1. Create Supabase Auth User
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email: registrationData.email,
-      password: registrationData.passwordInput, // Use passwordInput
+      password: registrationData.passwordInput,
     });
 
     if (signUpError) {
@@ -75,7 +81,6 @@ export const authService = {
 
     let createdOrganization: Organization | null = null;
     try {
-      // 2. Create Organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({ name: registrationData.organizationName })
@@ -84,17 +89,16 @@ export const authService = {
 
       if (orgError) {
         console.error('Supabase create organization error:', orgError);
-        throw orgError; // This error will be caught by the catch block below
+        throw orgError;
       }
       if (!orgData) {
         throw new Error('Organization creation failed: No data returned.');
       }
       createdOrganization = orgData as Organization;
 
-      // 3. Create User Profile
       const userProfilePayload = {
         auth_user_id: authData.user.id,
-        email: authData.user.email!, // Email is confirmed available on authData.user
+        email: authData.user.email!,
         full_name: registrationData.fullName,
         role: Role.ADMIN,
         org_id: createdOrganization.id,
@@ -105,10 +109,10 @@ export const authService = {
         .insert(userProfilePayload)
         .select()
         .single();
-      
+
       if (profileError) {
         console.error('Supabase create user profile error:', profileError);
-        throw profileError; // This error will be caught by the catch block below
+        throw profileError;
       }
       if (!profileData) {
           throw new Error('User profile creation failed: No data returned.');
@@ -118,17 +122,11 @@ export const authService = {
       return { authUser: authData.user, organization: createdOrganization, profile: userProfileWithRole };
 
     } catch (error) {
-      // Cleanup attempt if any step after auth user creation fails
       console.error("Error during admin registration process, attempting cleanup:", error);
-      // Attempt to delete the created Supabase auth user if subsequent steps fail.
-      // This requires admin privileges, so it might not work client-side if not the user themselves.
-      // Ideally, use a service_role key in a backend function for robust cleanup.
-      // For now, we log and re-throw.
       if (authData.user) {
         console.warn(`Attempting to clean up auth user ${authData.user.id}. This might require admin privileges not available client-side.`);
-        // await supabase.auth.admin.deleteUser(authData.user.id); // This needs service_role
       }
-      throw error; // Re-throw the caught error (orgError or profileError)
+      throw error;
     }
   },
 
@@ -137,6 +135,7 @@ export const authService = {
     if (error) {
       console.error('Supabase logout error:', error);
     }
+    return; // Explicit return for Promise<void>
   },
 
   getSession: async (): Promise<{ session: Session | null; authUser: SupabaseAuthUser | null }> => {
@@ -147,7 +146,7 @@ export const authService = {
     }
     return { session: data.session, authUser: data.session?.user ?? null };
   },
-  
+
   getUserProfile: async (authUserId: string): Promise<UserProfile | null> => {
     const { data, error } = await supabase
       .from('users')
@@ -157,9 +156,11 @@ export const authService = {
 
     if (error) {
       console.error('Supabase getUserProfile error:', error);
-      if ((error as PostgrestError).code === 'PGRST116') { // PGRST116: "Searched for query did not return a result"
-          return null; // User profile not found, not necessarily an "error" to break flow
+      if ((error as PostgrestError).code === 'PGRST116') {
+          return null;
       }
+      // If it's another error, it might be better to throw or handle it specifically
+      // For now, returning null for any error to match original behavior for non-PGRST116 errors.
     }
     return data ? { ...data, role: data.role as Role } : null;
   },
@@ -207,7 +208,7 @@ export const userService = {
     if (!authData.user) {
       throw new Error('User creation failed: No auth user data returned.');
     }
-    
+
     const newUserProfileData = {
       auth_user_id: authData.user.id,
       email: userData.email,
@@ -231,17 +232,17 @@ export const userService = {
       console.warn(`Orphaned auth user might have been created (ID: ${authData.user.id}) due to empty profile data response. Manual cleanup may be required or use a backend function.`);
       throw new Error('User profile creation failed: No profile data returned.');
     }
-    
+
     return {...profileData, role: profileData.role as Role };
   },
 
   updateUser: async (
-    userId: string, 
+    userId: string,
     userData: Partial<{ full_name: string; role: Role }>,
-    authUserId?: string, 
+    authUserId?: string,
     passwordInput?: string
   ): Promise<UserProfile> => {
-    
+
     const { data: updatedProfile, error: profileUpdateError } = await supabase
       .from('users')
       .update(userData)
@@ -259,13 +260,13 @@ export const userService = {
 
     if (passwordInput && authUserId) {
         const {data: {user: currentAuthUser}} = await supabase.auth.getUser();
-        if (currentAuthUser?.id === authUserId) { 
+        if (currentAuthUser?.id === authUserId) {
              const { error: passwordUpdateError } = await supabase.auth.updateUser({ password: passwordInput });
              if (passwordUpdateError) {
                 console.error('Supabase updateUser (self) password error:', passwordUpdateError);
                 throw new Error(`Profile updated, but password update failed: ${passwordUpdateError.message}`);
             }
-        } else { 
+        } else {
             console.warn("Attempting to update another user's password from client-side using anon key. This operation will fail. Use a backend function with service_role privileges.");
         }
     }
@@ -276,26 +277,42 @@ export const userService = {
     const { error: profileDeleteError } = await supabase
       .from('users')
       .delete()
-      .eq('id', userId); 
+      .eq('id', userId);
 
     if (profileDeleteError) {
       console.error('Supabase deleteUser (profile) error:', profileDeleteError);
       throw profileDeleteError;
     }
-    
+
     console.warn(`User profile ${userId} deleted. Deleting Supabase auth user ${authUserId} from client-side with an anon key is NOT PERMITTED for other users and will fail silently or error. This MUST be handled by a backend function (e.g., Supabase Edge Function) with service_role privileges.`);
+    return; // Explicit return for Promise<void>
   },
 };
 
+// --- Lead Service Interface ---
+interface LeadServiceInterface {
+  getLeads: (orgId: string) => Promise<Lead[]>;
+  addLead: (
+    leadData: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>,
+    orgId: string
+  ) => Promise<Lead>;
+  updateLead: (
+    leadId: string,
+    leadData: Partial<Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>>
+  ) => Promise<Lead>;
+  deleteLead: (leadId: string) => Promise<void>;
+}
+
+
 // --- Lead Service ---
-export const leadService = {
+export const leadService: LeadServiceInterface = {
   getLeads: async (orgId: string): Promise<Lead[]> => {
     const { data, error } = await supabase
       .from('leads')
-      .select(\`
+      .select(`
         id, name, email, mobile, source, status, stage, org_id, owner_user_id, notes, created_at, updated_at,
-        owner:users ( id, full_name ) 
-      \`)
+        owner:users ( id, full_name )
+      `)
       .eq('org_id', orgId)
       .order('created_at', { ascending: false });
 
@@ -304,14 +321,14 @@ export const leadService = {
       throw error;
     }
     return data?.map(lead => {
-      const ownerInfo = lead.owner as unknown as { id: string, full_name: string } | null; 
+      const ownerInfo = lead.owner as unknown as { id: string, full_name: string } | null;
       return {
         ...lead,
         status: lead.status as LeadStatus,
         owner_name: ownerInfo?.full_name || 'Unassigned',
         owner_user_id: ownerInfo?.id || null,
-        owner: undefined, 
-      } as Lead; 
+        owner: undefined, // Remove the nested owner object after processing
+      } as Lead;
     }) || [];
   },
 
@@ -323,12 +340,12 @@ export const leadService = {
     const { data, error } = await supabase
       .from('leads')
       .insert(payload)
-      .select(\`
+      .select(`
         id, name, email, mobile, source, status, stage, org_id, owner_user_id, notes, created_at, updated_at,
         owner:users ( id, full_name )
-      \`)
+      `)
       .single();
-    
+
     if (error) {
       console.error('Supabase addLead error:', error);
       throw error;
@@ -337,13 +354,14 @@ export const leadService = {
         throw new Error('Lead creation failed: No data returned.');
     }
     const ownerInfo = data.owner as unknown as { id: string, full_name: string } | null;
-    return {
+    const newLead: Lead = {
       ...data,
       status: data.status as LeadStatus,
       owner_name: ownerInfo?.full_name || 'Unassigned',
       owner_user_id: ownerInfo?.id || null,
-      owner: undefined,
-    } as Lead;
+      owner: undefined, // Remove the nested owner object
+    };
+    return newLead;
   },
 
   updateLead: async (leadId: string, leadData: Partial<Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>>): Promise<Lead> => {
@@ -355,10 +373,10 @@ export const leadService = {
       .from('leads')
       .update(payload)
       .eq('id', leadId)
-      .select(\`
+      .select(`
         id, name, email, mobile, source, status, stage, org_id, owner_user_id, notes, created_at, updated_at,
         owner:users ( id, full_name )
-      \`)
+      `)
       .single();
 
     if (error) {
@@ -369,13 +387,14 @@ export const leadService = {
         throw new Error('Lead update failed: No data returned.');
     }
     const ownerInfo = data.owner as unknown as { id: string, full_name: string } | null;
-    return {
+    const updatedLead: Lead = {
       ...data,
       status: data.status as LeadStatus,
       owner_name: ownerInfo?.full_name || 'Unassigned',
       owner_user_id: ownerInfo?.id || null,
-      owner: undefined,
-    } as Lead;
+      owner: undefined, // Remove the nested owner object
+    };
+    return updatedLead;
   },
 
   deleteLead: async (leadId: string): Promise<void> => {
@@ -388,5 +407,6 @@ export const leadService = {
       console.error('Supabase deleteLead error:', error);
       throw error;
     }
+    return; // Explicit return for Promise<void>
   },
 };
