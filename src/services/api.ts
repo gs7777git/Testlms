@@ -156,8 +156,8 @@ export const authService = {
 
     if (error) {
       console.error('Supabase getUserProfile error:', error);
-      if ((error as PostgrestError).code === 'PGRST116') {
-          return null;
+      if ((error as PostgrestError).code === 'PGRST116') { // "PGRST116" means "JSON object requested, but array found" (or vice versa) often when .single() expects one row but gets zero or multiple.
+          return null; // No profile found for this auth user, or multiple (which shouldn't happen with auth_user_id as unique)
       }
       // If it's another error, it might be better to throw or handle it specifically
       // For now, returning null for any error to match original behavior for non-PGRST116 errors.
@@ -258,22 +258,26 @@ export const userService = {
       throw new Error('User profile update failed: No data returned.');
     }
 
+    // Password update for the current authenticated user (self-update)
     if (passwordInput && authUserId) {
-        const {data: {user: currentAuthUser}} = await supabase.auth.getUser();
-        if (currentAuthUser?.id === authUserId) {
+        const {data: {user: currentAuthUser}} = await supabase.auth.getUser(); // Get current session's auth user
+        if (currentAuthUser?.id === authUserId) { // Check if the update is for the currently logged-in user
              const { error: passwordUpdateError } = await supabase.auth.updateUser({ password: passwordInput });
              if (passwordUpdateError) {
                 console.error('Supabase updateUser (self) password error:', passwordUpdateError);
+                // Decide on error handling: throw or return profile with warning
                 throw new Error(`Profile updated, but password update failed: ${passwordUpdateError.message}`);
             }
         } else {
-            console.warn("Attempting to update another user's password from client-side using anon key. This operation will fail. Use a backend function with service_role privileges.");
+            // This case should ideally be handled by backend due to permissions
+            console.warn("Attempting to update another user's password from client-side using anon key. This operation will fail unless RLS allows or it's the same user. For admin changes, use a backend function with service_role privileges.");
         }
     }
     return {...updatedProfile, role: updatedProfile.role as Role };
   },
 
   deleteUser: async (userId: string, authUserId: string): Promise<void> => {
+    // First, delete the user profile from 'users' table
     const { error: profileDeleteError } = await supabase
       .from('users')
       .delete()
@@ -284,7 +288,18 @@ export const userService = {
       throw profileDeleteError;
     }
 
+    // IMPORTANT: Deleting a Supabase auth user (supabase.auth.users) from client-side using an anon key
+    // is NOT PERMITTED for users other than the currently authenticated one.
+    // This operation WILL FAIL silently or error if trying to delete another user.
+    // It MUST be handled by a backend function (e.g., Supabase Edge Function) with service_role privileges.
     console.warn(`User profile ${userId} deleted. Deleting Supabase auth user ${authUserId} from client-side with an anon key is NOT PERMITTED for other users and will fail silently or error. This MUST be handled by a backend function (e.g., Supabase Edge Function) with service_role privileges.`);
+    
+    // Example of how it *would* be called if permissions allowed (e.g., for self-deletion, though not typical flow here)
+    // const { error: authUserDeleteError } = await supabase.auth.admin.deleteUser(authUserId); // This needs admin privileges
+    // if (authUserDeleteError) {
+    //   console.error('Supabase deleteUser (auth record) error:', authUserDeleteError);
+    //   throw new Error(`Profile deleted, but failed to delete auth record: ${authUserDeleteError.message}. Manual cleanup required.`);
+    // }
     return; // Explicit return for Promise<void>
   },
 };
@@ -298,7 +313,7 @@ interface LeadServiceInterface {
   ) => Promise<Lead>;
   updateLead: (
     leadId: string,
-    leadData: Partial<Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>>
+    leadData: Partial<Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id' | 'owner'>> // Allow 'owner' temporarily from Supabase response
   ) => Promise<Lead>;
   deleteLead: (leadId: string) => Promise<void>;
 }
@@ -320,26 +335,28 @@ export const leadService: LeadServiceInterface = {
       console.error('Supabase getLeads error:', error);
       throw error;
     }
-    return data?.map(lead => {
-      const ownerInfo = lead.owner as unknown as { id: string, full_name: string } | null;
+    return data?.map(item => {
+      const { owner, ...leadFields } = item;
+      const ownerInfo = owner as unknown as { id: string, full_name: string } | null;
       return {
-        ...lead,
-        status: lead.status as LeadStatus,
+        ...leadFields,
+        status: leadFields.status as LeadStatus,
         owner_name: ownerInfo?.full_name || 'Unassigned',
         owner_user_id: ownerInfo?.id || null,
-        owner: undefined, // Remove the nested owner object after processing
       } as Lead;
     }) || [];
   },
 
   addLead: async (leadData: Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>, orgId: string): Promise<Lead> => {
-    const payload = { ...leadData, org_id: orgId };
+    const payload: Partial<Lead> & { org_id: string } = { ...leadData, org_id: orgId };
+    
     if (payload.owner_user_id === '') {
         payload.owner_user_id = null;
     }
+
     const { data, error } = await supabase
       .from('leads')
-      .insert(payload)
+      .insert(payload as Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name'>) // Cast to assure Supabase of the shape
       .select(`
         id, name, email, mobile, source, status, stage, org_id, owner_user_id, notes, created_at, updated_at,
         owner:users ( id, full_name )
@@ -353,22 +370,25 @@ export const leadService: LeadServiceInterface = {
     if (!data) {
         throw new Error('Lead creation failed: No data returned.');
     }
-    const ownerInfo = data.owner as unknown as { id: string, full_name: string } | null;
+
+    const { owner, ...newLeadFields } = data;
+    const ownerInfo = owner as unknown as { id: string, full_name: string } | null;
     const newLead: Lead = {
-      ...data,
-      status: data.status as LeadStatus,
+      ...newLeadFields,
+      status: newLeadFields.status as LeadStatus,
       owner_name: ownerInfo?.full_name || 'Unassigned',
       owner_user_id: ownerInfo?.id || null,
-      owner: undefined, // Remove the nested owner object
     };
     return newLead;
   },
 
   updateLead: async (leadId: string, leadData: Partial<Omit<Lead, 'id' | 'created_at' | 'updated_at' | 'owner_name' | 'org_id'>>): Promise<Lead> => {
     const payload = {...leadData};
+    
     if (payload.owner_user_id === '') {
         payload.owner_user_id = null;
     }
+
     const { data, error } = await supabase
       .from('leads')
       .update(payload)
@@ -386,13 +406,14 @@ export const leadService: LeadServiceInterface = {
     if (!data) {
         throw new Error('Lead update failed: No data returned.');
     }
-    const ownerInfo = data.owner as unknown as { id: string, full_name: string } | null;
+
+    const { owner, ...updatedLeadFields } = data;
+    const ownerInfo = owner as unknown as { id: string, full_name: string } | null;
     const updatedLead: Lead = {
-      ...data,
-      status: data.status as LeadStatus,
+      ...updatedLeadFields,
+      status: updatedLeadFields.status as LeadStatus,
       owner_name: ownerInfo?.full_name || 'Unassigned',
       owner_user_id: ownerInfo?.id || null,
-      owner: undefined, // Remove the nested owner object
     };
     return updatedLead;
   },
