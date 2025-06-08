@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate }  from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserProfile, NavigationItem, Role } from '@/types'; 
+import { NavigationItem, Role } from '@/types'; 
 import { APP_NAME } from '@/constants';
 import { 
   DashboardIcon, LeadsIcon, UsersIcon, ReportsIcon, SettingsIcon, LogoutIcon, 
@@ -38,7 +37,6 @@ const UserNavigation = ({ onLogout }: { onLogout: () => void }) => (
   </div>
 );
 
-
 export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { profile, logout, hasRole } = useAuth(); 
@@ -70,18 +68,16 @@ export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children })
             <Link
               key={item.name}
               to={item.href}
-              className={`
-                ${item.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:bg-primary-600 hover:text-white'}
-                group flex items-center px-2 py-2 text-sm font-medium rounded-md
-              `}
+              className={`${
+                item.current ? 'bg-primary-800 text-white' : 'text-primary-100 hover:bg-primary-600 hover:text-white'
+              } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
               aria-current={item.current ? 'page' : undefined}
               onClick={() => sidebarOpen && setSidebarOpen(false)} 
             >
               <item.icon
-                className={`
-                  ${item.current ? 'text-white' : 'text-primary-300 group-hover:text-primary-100'}
-                  mr-3 flex-shrink-0 h-6 w-6
-                `}
+                className={`${
+                  item.current ? 'text-white' : 'text-primary-300 group-hover:text-primary-100'
+                } mr-3 flex-shrink-0 h-6 w-6`}
                 aria-hidden="true"
               />
               {item.name}
@@ -114,10 +110,8 @@ export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children })
     </>
   );
 
-
   return (
     <div>
-      {/* Mobile sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden" role="dialog" aria-modal="true">
           <div className="fixed inset-0 bg-secondary-600 bg-opacity-75" aria-hidden="true" onClick={() => setSidebarOpen(false)} />
@@ -137,14 +131,11 @@ export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children })
           <div className="w-14 flex-shrink-0" aria-hidden="true" />
         </div>
       )}
-
-      {/* Static sidebar for desktop */}
       <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
         <div className="flex min-h-0 flex-1 flex-col bg-primary-700">
          <SidebarContent />
         </div>
       </div>
-
       <div className="flex flex-col md:pl-64">
         <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow">
           <button
@@ -159,7 +150,6 @@ export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children })
           </button>
           <div className="flex flex-1 justify-between px-4">
             <div className="flex flex-1">
-              {/* Search bar can go here if needed */}
             </div>
             <div className="ml-4 flex items-center md:ml-6">
               {profile && ( 
@@ -170,7 +160,6 @@ export const PageShell: React.FC<{ children: React.ReactNode }> = ({ children })
             </div>
           </div>
         </div>
-
         <main className="flex-1">
           <div className="py-6">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
