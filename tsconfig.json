@@ -5,31 +5,23 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": false, // Change this to allow emitting output files
-    "outDir": "./dist", // Specify an output directory
+    "noEmit": true,
     "jsx": "react-jsx",
-
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
-
-    /* Path Aliases */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-
-    /* Vite client types */
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts", "postcss.config.js", "tailwind.config.js", ".eslintrc.cjs"],
+  "include": ["src", "postcss.config.js", "tailwind.config.js", ".eslintrc.cjs"],
+  "exclude": ["vite.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
