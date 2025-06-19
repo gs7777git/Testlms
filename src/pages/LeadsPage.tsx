@@ -77,7 +77,6 @@ export const LeadsPage: React.FC = () => {
     if (currentUserProfile?.org_id) {
       fetchData({ isInitialLoad: true });
     } else {
-      // Clear data and stop loading if user logs out or org_id is not available
       setPageLoading(false);
       setIsDataLoading(false);
       setLeads([]);
@@ -204,7 +203,7 @@ export const LeadsPage: React.FC = () => {
   const handleConfirmBulkAction = async (leadIds: string[], updates: Partial<{ status: LeadStatus; owner_user_id: string | null }>) => {
     setIsDataLoading(true);
     try {
-      await leadService.bulkUpdateLeadDetails(leadIds, updates);
+      await leadService.bulkUpdateLeadDetails(leadIds, updates, currentUserProfile?.org_id || '');
       refreshLeadsData();
       setSelectedLeadIds([]);
       handleCloseBulkActionModal();
@@ -229,7 +228,7 @@ export const LeadsPage: React.FC = () => {
   };
   
   if (pageLoading) { 
-    return <div className="flex justify-center items-center h-screen"><Spinner size="lg" /></div>;
+    return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;
   }
 
   return (
@@ -237,13 +236,13 @@ export const LeadsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h1 className="text-2xl font-semibold text-secondary-900">Leads Management</h1>
         <div className="flex flex-wrap gap-2">
-            {(hasRole([Role.ADMIN, Role.USER])) &&
-                <Button onClick={handleOpenBulkUploadModal} leftIcon={<UploadIcon className="h-5 w-5" />} disabled={isDataLoading}>
-                    Bulk Upload Leads
+            { (hasRole([Role.ADMIN])) && 
+                <Button onClick={handleOpenBulkUploadModal} leftIcon={<UploadIcon className="h-5 w-5" />} disabled={pageLoading || isDataLoading}>
+                    Import Leads (CSV)
                 </Button>
             }
-            {(hasRole([Role.ADMIN, Role.USER])) &&
-                <Button onClick={() => handleOpenModal()} leftIcon={<PlusIcon className="h-5 w-5" />} disabled={isDataLoading}>
+            { (hasRole([Role.ADMIN, Role.USER])) && 
+                <Button onClick={() => handleOpenModal()} leftIcon={<PlusIcon className="h-5 w-5" />} disabled={pageLoading || isDataLoading}>
                 Add New Lead
                 </Button>
             }
@@ -269,100 +268,99 @@ export const LeadsPage: React.FC = () => {
                 wrapperClassName="md:col-span-1"
             />
             <Input
+                name="source"
                 label="Filter by Source"
                 id="lead-source-filter"
-                name="source"
-                placeholder="Filter by source..."
+                placeholder="Enter source..."
                 value={filters.source}
                 onChange={handleFilterChange}
                 wrapperClassName="md:col-span-1"
             />
         </div>
       </div>
-      
-      {selectedLeadIds.length > 0 && (
-        <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-md flex flex-col sm:flex-row justify-between items-center gap-2">
-            <p className="text-sm text-primary-700">
-                <span className="font-semibold">{selectedLeadIds.length}</span> lead(s) selected.
-            </p>
+      {selectedLeadIds.length > 0 && hasRole(Role.ADMIN) && (
+         <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-md flex flex-col sm:flex-row items-center gap-3">
+            <p className="text-sm font-medium text-primary-700">{selectedLeadIds.length} lead(s) selected.</p>
             <div className="flex gap-2 flex-wrap">
-                <Button onClick={() => handleOpenBulkActionModal('status')} size="sm" leftIcon={<TableCellsIcon className="h-4 w-4"/>} variant="outline" disabled={isDataLoading}>Change Status</Button>
-                {hasRole(Role.ADMIN) && <Button onClick={() => handleOpenBulkActionModal('owner')} size="sm" leftIcon={<UsersIcon className="h-4 w-4"/>} variant="outline" disabled={isDataLoading}>Reassign Owner</Button>}
+                <Button onClick={() => handleOpenBulkActionModal('status')} leftIcon={<TableCellsIcon className="h-4 w-4"/>} size="sm" variant="outline">Change Status</Button>
+                <Button onClick={() => handleOpenBulkActionModal('owner')} leftIcon={<UsersIcon className="h-4 w-4"/>} size="sm" variant="outline">Change Owner</Button>
             </div>
-        </div>
+         </div>
       )}
+
+      {pageLoading && <div className="my-4 flex justify-center"><Spinner /></div>}
 
       <div className="bg-white shadow overflow-x-auto rounded-lg">
         <table className="min-w-full divide-y divide-secondary-200" aria-label="Leads Table">
           <thead className="bg-secondary-50">
             <tr>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider w-12">
-                <label htmlFor="select-all-leads-checkbox" className="sr-only">Select all leads</label>
+              <th scope="col" className="px-4 py-3 text-left">
                 <input
-                  type="checkbox"
-                  id="select-all-leads-checkbox"
-                  className="form-checkbox h-5 w-5 text-primary-600 border-secondary-300 rounded focus:ring-primary-500"
-                  checked={isAllSelected}
-                  ref={input => {
-                    if (input) input.indeterminate = isIndeterminate;
-                  }}
-                  onChange={handleSelectAllLeads}
-                  disabled={filteredLeads.length === 0 || isDataLoading}
-                  aria-label="Select all leads in current view"
+                    type="checkbox"
+                    className="form-checkbox h-4 w-4 text-primary-600 border-secondary-300 rounded focus:ring-primary-500"
+                    checked={isAllSelected}
+                    ref={input => { // For indeterminate state
+                        if (input) input.indeterminate = isIndeterminate;
+                    }}
+                    onChange={handleSelectAllLeads}
+                    aria-label="Select all leads"
+                    disabled={filteredLeads.length === 0}
                 />
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Name</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Email</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Mobile</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Stage</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Source</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Company</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Assigned To</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">Last Updated</th>
               <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-secondary-200">
-            {isDataLoading && leads.length > 0 ? ( // Show spinner overlaying table if refreshing existing data
-                <tr><td colSpan={10} className="px-6 py-12 text-center relative">
-                    <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center"><Spinner /></div>
-                    Updating data...
-                </td></tr>
+            {isDataLoading && leads.length > 0 ? ( // Show spinner overlay if data is refreshing
+              <tr><td colSpan={9} className="px-6 py-12 text-center relative">
+                  <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center"><Spinner /></div>
+                  Updating data...
+              </td></tr>
             ) : filteredLeads.length === 0 ? (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-sm text-secondary-500">No leads found matching your criteria.</td></tr>
+                <tr><td colSpan={9} className="px-6 py-12 text-center text-sm text-secondary-500">No leads found matching your criteria.</td></tr>
             ) : (
                 filteredLeads.map((lead) => (
                 <tr key={lead.id} className={`hover:bg-secondary-50 ${selectedLeadIds.includes(lead.id) ? 'bg-primary-50' : ''}`}>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                     <label htmlFor={`select-lead-${lead.id}`} className="sr-only">Select lead {lead.name}</label>
-                    <input
-                      type="checkbox"
-                      id={`select-lead-${lead.id}`}
-                      className="form-checkbox h-5 w-5 text-primary-600 border-secondary-300 rounded focus:ring-primary-500"
-                      checked={selectedLeadIds.includes(lead.id)}
-                      onChange={() => handleSelectLead(lead.id)}
-                      aria-label={`Select lead ${lead.name}`}
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-secondary-900">{lead.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.mobile}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                     <td className="px-4 py-4">
+                        <input
+                            type="checkbox"
+                            className="form-checkbox h-4 w-4 text-primary-600 border-secondary-300 rounded focus:ring-primary-500"
+                            checked={selectedLeadIds.includes(lead.id)}
+                            onChange={() => handleSelectLead(lead.id)}
+                            aria-label={`Select lead ${lead.name}`}
+                        />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-secondary-900">{lead.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.mobile}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColorClasses(lead.status)}`}>
                         {lead.status}
                         </span>
                     </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.stage || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.source}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.owner_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{new Date(lead.updated_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(lead, true)} aria-label={`View ${lead.name}`}><EyeIcon className="h-4 w-4" /></Button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.company_name || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{lead.owner_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{new Date(lead.updated_at).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenModal(lead, true)} aria-label={`View ${lead.name}`} disabled={pageLoading || isDataLoading}>
+                          <EyeIcon className="h-4 w-4" />
+                      </Button>
                       {(hasRole(Role.ADMIN) || (hasRole(Role.USER) && lead.owner_user_id === currentUserProfile?.id)) &&
-                          <Button variant="outline" size="sm" onClick={() => handleOpenModal(lead)} aria-label={`Edit ${lead.name}`}><EditIcon className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="sm" onClick={() => handleOpenModal(lead)} aria-label={`Edit ${lead.name}`} disabled={pageLoading || isDataLoading}>
+                          <EditIcon className="h-4 w-4" />
+                          </Button>
                       }
                       {hasRole(Role.ADMIN) &&
-                          <Button variant="danger" size="sm" onClick={() => handleDeleteLead(lead.id)} aria-label={`Delete ${lead.name}`}><DeleteIcon className="h-4 w-4" /></Button>
+                          <Button variant="danger" size="sm" onClick={() => handleDeleteLead(lead.id)} aria-label={`Delete ${lead.name}`} disabled={pageLoading || isDataLoading}>
+                          <DeleteIcon className="h-4 w-4" />
+                          </Button>
                       }
                     </td>
                 </tr>
@@ -381,14 +379,14 @@ export const LeadsPage: React.FC = () => {
           viewMode={isViewMode}
         />
       )}
-      {isBulkUploadModalOpen && (
-        <BulkUploadModal
+      {isBulkUploadModalOpen && currentUserProfile && (
+        <BulkUploadModal 
             isOpen={isBulkUploadModalOpen}
             onClose={handleCloseBulkUploadModal}
             onImportComplete={handleImportComplete}
         />
       )}
-      {isBulkActionModalOpen && bulkActionType && (
+      {isBulkActionModalOpen && currentUserProfile && bulkActionType && (
         <BulkActionModal
             isOpen={isBulkActionModalOpen}
             onClose={handleCloseBulkActionModal}

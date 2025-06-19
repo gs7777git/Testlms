@@ -195,8 +195,11 @@ export const ContactsPage: React.FC = () => {
         refreshContactsData();
     } catch (error) {
         console.error("Error saving contact:", error);
-        setIsDataLoading(false);
+        // Error is re-thrown by modal onSave prop, so modal can display it.
+        // Page's isDataLoading will be handled by finally.
         throw error; 
+    } finally {
+        setIsDataLoading(false);
     }
   };
 

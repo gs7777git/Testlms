@@ -97,7 +97,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       resetForm();
     }
-  }, [taskToEdit, isOpen, viewModeInitial, resetForm, currentUserProfile, activeTab]); // Added activeTab to dependencies
+  }, [taskToEdit, isOpen, viewModeInitial, resetForm, currentUserProfile, activeTab]); 
 
   const fetchComments = useCallback(async () => {
     if (!taskToEdit?.id || !currentUserProfile?.org_id) return;
@@ -153,7 +153,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             taskToEdit ? { ...finalPayload, id: taskToEdit.id } : finalPayload,
             !taskToEdit
         );
-        // Parent will handle closing modal and refreshing data
     } catch (error: any) {
       console.error('Failed to save task:', error);
       setErrors(prev => ({ ...prev, form: error.message || 'Failed to save task.' }));
@@ -171,7 +170,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         comment: newComment,
       }, currentUserProfile.org_id, currentUserProfile.id);
       setNewComment('');
-      fetchComments(); // Refresh comments list
+      fetchComments(); 
     } catch (error) {
       console.error('Failed to add comment:', error);
       setErrors(prev => ({ ...prev, comments: 'Failed to add comment.' }));
@@ -183,7 +182,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const canEditCurrentTask = hasRole(Role.ADMIN) || 
                             (taskToEdit && currentUserProfile?.id === taskToEdit.created_by_user_id) ||
                             (taskToEdit && currentUserProfile?.id === taskToEdit.assigned_to_user_id) ||
-                            !taskToEdit; // Can always "edit" a new task form
+                            !taskToEdit; 
 
   const TABS: { name: ActiveTaskModalTab; label: string }[] = [
     { name: 'details', label: 'Details' },
@@ -286,7 +285,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
       {activeTab === 'details' && renderDetailsTab()}
       {activeTab === 'comments' && taskToEdit && renderCommentsTab()}
-      {!taskToEdit && renderDetailsTab()} {/* Show details form directly if new task */}
+      {!taskToEdit && renderDetailsTab()} 
     </Modal>
   );
 };

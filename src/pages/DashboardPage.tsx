@@ -6,7 +6,7 @@ import { leadService, userService, leadFollowUpService, reportService, supabase 
 import { LeadActivity, LeadFollowUp, Role, LeadStatus, LeadFollowUpStatus, SalesReportData, TaskDashboardStats } from '@/types';
 import { Spinner } from '@/components/common/Spinner';
 import { EyeIcon, ClipboardDocumentCheckIcon, UsersIcon, LeadsIcon } from '@/components/common/Icons';
-import { StatCard } from '@/pages/ReportsPage'; 
+import { StatCard } from './ReportsPage'; 
 
 interface DashboardStats {
   myTotalLeads?: number; // User's assigned leads
@@ -73,7 +73,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!profile || !profile.org_id || !profile.id) { // Added profile.id check
+      if (!profile || !profile.org_id || !profile.id) { 
         setIsLoading(false);
         return;
       }
@@ -82,7 +82,6 @@ export const DashboardPage: React.FC = () => {
         let newStats: Partial<DashboardStats & SalesReportData> = {};
         const promises = [];
 
-        // Admin specific stats
         if (hasRole(Role.ADMIN)) {
           promises.push(
             userService.getUsers(profile.org_id).then(users => newStats.totalUsersInOrg = users.length),
@@ -93,8 +92,6 @@ export const DashboardPage: React.FC = () => {
           );
         }
         
-        // User specific stats (also relevant for admin's own view)
-        // profile.id is now checked above
         promises.push(
         leadService.getLeads(profile.org_id).then(leads => {
             const myLeads = leads.filter(lead => lead.owner_user_id === profile.id);
@@ -107,7 +104,7 @@ export const DashboardPage: React.FC = () => {
             }
         }),
         leadFollowUpService.getUpcomingFollowUpsForUser(profile.id, profile.org_id, 5).then(setUpcomingFollowUps),
-        reportService.getTaskDashboardStats(profile.org_id, profile.id).then(setTaskStats)
+        reportService.getTaskDashboardStats(profile.org_id, profile.id, profile.role).then(setTaskStats)
         );
         
          promises.push(

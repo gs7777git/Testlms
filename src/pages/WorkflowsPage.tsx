@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SitemapIcon, LeadsIcon, SettingsIcon, ChatBubbleLeftRightIcon, UsersIcon } from '@/components/common/Icons'; // Added UsersIcon for potential example
+import { SitemapIcon, LeadsIcon, SettingsIcon, ChatBubbleLeftRightIcon, UsersIcon } from '@/components/common/Icons'; 
 import { Button } from '@/components/common/Button';
 
 export const WorkflowsPage: React.FC = () => {
@@ -79,4 +79,3 @@ const WorkflowCategoryCard: React.FC<{title: string, description: string, icon: 
     </Button>
   </div>
 );
-

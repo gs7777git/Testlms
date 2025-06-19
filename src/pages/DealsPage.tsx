@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
 import { DEAL_STATUS_OPTIONS } from '@/constants';
-import { BarChartPlaceholder, StatCard } from '@/pages/ReportsPage'; 
+import { BarChartPlaceholder, StatCard } from './ReportsPage'; 
 import { Link } from 'react-router-dom';
 
 
@@ -55,7 +55,7 @@ export const DealsPage: React.FC = () => {
       ];
       if (isInitialLoad) {
         promises.push(userService.getUsers(currentUserProfile.org_id));
-        promises.push(leadService.getLeads(currentUserProfile.org_id)); // Fetch leads for DealModal
+        promises.push(leadService.getLeads(currentUserProfile.org_id)); 
       }
       
       const results = await Promise.all(promises);
@@ -250,7 +250,6 @@ export const DealsPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">{new Date(deal.created_at).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                     <Button variant="outline" size="sm" onClick={() => handleOpenModal(deal)} aria-label={`View/Edit ${deal.deal_name}`}><EyeIcon className="h-4 w-4" /></Button>
-                    {/* EditIcon could be inside EyeIcon view if modal supports toggling edit state */}
                     {(hasRole(Role.ADMIN) || currentUserProfile?.id === deal.created_by_user_id) &&
                         <Button variant="danger" size="sm" onClick={() => handleDeleteDeal(deal.id)} aria-label={`Delete ${deal.deal_name}`}><DeleteIcon className="h-4 w-4" /></Button>
                     }
@@ -271,8 +270,6 @@ export const DealsPage: React.FC = () => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           dealToEdit={editingDeal}
-          // For creating a new deal directly from DealsPage, we don't preselect a lead here.
-          // The DealModal itself will need to fetch available leads for selection.
         />
       )}
     </div>

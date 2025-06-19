@@ -48,26 +48,32 @@ export const TasksPage: React.FC = () => {
     }
 
     try {
+      // Fetch users on every data fetch to ensure assignees list is up-to-date for filters/modal
       const fetchedUsers = await userService.getUsers(currentUserProfile.org_id); 
-      if (isInitialLoad) setUsers(fetchedUsers || []); 
+      setUsers(fetchedUsers || []); 
 
-      const promises: (Promise<Task[]> | Promise<Company[]> | Promise<Contact[]> | Promise<Lead[]>)[] = [
-        taskService.getTasks(currentUserProfile.org_id, currentUserProfile.id, currentUserProfile.role, fetchedUsers || []),
-      ];
+      const taskPromise = taskService.getTasks(currentUserProfile.org_id, currentUserProfile.id, currentUserProfile.role, fetchedUsers || []);
+      
+      let fetchedCompanies: Company[] = companies;
+      let fetchedContacts: Contact[] = contacts;
+      let fetchedLeads: Lead[] = leads;
 
       if (isInitialLoad) {
-        promises.push(companyService.getCompanies(currentUserProfile.org_id));
-        promises.push(contactService.getContacts(currentUserProfile.org_id));
-        promises.push(leadService.getLeads(currentUserProfile.org_id));
+        const [companiesRes, contactsRes, leadsRes] = await Promise.all([
+            companyService.getCompanies(currentUserProfile.org_id),
+            contactService.getContacts(currentUserProfile.org_id),
+            leadService.getLeads(currentUserProfile.org_id)
+        ]);
+        fetchedCompanies = companiesRes || [];
+        fetchedContacts = contactsRes || [];
+        fetchedLeads = leadsRes || [];
+        setCompanies(fetchedCompanies);
+        setContacts(fetchedContacts);
+        setLeads(fetchedLeads);
       }
       
-      const results = await Promise.all(promises);
-      setTasks(results[0] as Task[] || []);
-      if (isInitialLoad) {
-        if(results.length > 1 && results[1]) setCompanies(results[1] as Company[] || []);
-        if(results.length > 2 && results[2]) setContacts(results[2] as Contact[] || []);
-        if(results.length > 3 && results[3]) setLeads(results[3] as Lead[] || []);
-      }
+      const fetchedTasks = await taskPromise;
+      setTasks(fetchedTasks || []);
 
     } catch (error) {
       console.error("Failed to fetch tasks or related data:", error);
@@ -82,7 +88,7 @@ export const TasksPage: React.FC = () => {
       }
       setIsDataLoading(false);
     }
-  }, [currentUserProfile]);
+  }, [currentUserProfile, companies, contacts, leads]); // Added companies, contacts, leads to deps for non-initial loads if needed
 
   useEffect(() => {
     if (currentUserProfile) {
@@ -92,7 +98,7 @@ export const TasksPage: React.FC = () => {
         setIsDataLoading(false);
         setTasks([]); setUsers([]); setCompanies([]); setContacts([]); setLeads([]);
     }
-  }, [currentUserProfile, fetchData]);
+  }, [currentUserProfile, fetchData]); 
 
   const refreshTasksData = () => {
     fetchData({ isInitialLoad: false });
@@ -125,13 +131,13 @@ export const TasksPage: React.FC = () => {
       }
       refreshTasksData();
       handleCloseModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save task:", error);
-      alert(`Error saving task: ${(error as Error).message}`);
+      alert(`Error saving task: ${error.message}`);
+      setIsDataLoading(false); // Ensure loading is reset on error
       throw error; 
-    } finally {
-      setIsDataLoading(false);
-    }
+    } 
+    // No finally here, refreshTasksData will handle setIsDataLoading(false)
   };
 
   const handleDeleteTask = async (taskId: string) => {

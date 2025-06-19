@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
@@ -181,8 +182,11 @@ export const CompaniesPage: React.FC = () => {
         refreshCompaniesData();
     } catch (error) {
         console.error("Error saving company:", error);
-        setIsDataLoading(false);
+        // Error is re-thrown by modal onSave prop, so modal can display it.
+        // Page's isDataLoading will be handled by finally.
         throw error; 
+    } finally {
+        setIsDataLoading(false);
     }
   };
 

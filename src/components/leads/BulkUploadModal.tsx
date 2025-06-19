@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent, useCallback, useEffect } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
@@ -13,7 +14,7 @@ import { LEAD_STATUS_OPTIONS } from '@/constants';
 interface BulkUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportComplete: () => void; // To refresh leads list on parent page
+  onImportComplete: () => void; 
 }
 
 type Mapping = { [csvHeader: string]: Extract<keyof ImportedLeadData, string> | 'ignore' | '' };
@@ -30,7 +31,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
   const [step, setStep] = useState<ImportStep>('upload');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [csvData, setCsvData] = useState<string[][]>([]); // Store raw string data for preview
+  const [csvData, setCsvData] = useState<string[][]>([]); 
   const [columnMapping, setColumnMapping] = useState<Mapping>({});
   const [parsedLeads, setParsedLeads] = useState<ImportedLeadData[]>([]);
   const [errorRows, setErrorRows] = useState<{ row: string[], error: string }[]>([]);
@@ -90,7 +91,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
 
         const initialMapping: Mapping = {};
         headers.forEach(header => {
-          const lowerHeader = (header as string).toLowerCase().replace(/[\s_]/g, ''); // Normalize header
+          const lowerHeader = (header as string).toLowerCase().replace(/[\s_]/g, ''); 
           const matchedField = STANDARD_LEAD_FIELDS.find(field => lowerHeader.includes(field.toLowerCase()));
           initialMapping[header] = matchedField || ''; 
         });
@@ -123,7 +124,6 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
     const tempParsedLeads: ImportedLeadData[] = [];
     const tempErrorRows: { row: string[], error: string }[] = [];
 
-    // Validation for required CRM fields
     const mappedCrmFields = Object.values(columnMapping);
     const missingRequiredMappings = REQUIRED_CRM_FIELDS.filter(
       (requiredField) => !mappedCrmFields.includes(requiredField)
@@ -149,19 +149,18 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClos
         }
       });
       
-      // Basic Validation
       if (!lead.name?.trim()) rowError += 'Lead Name is missing. ';
       if (!lead.email?.trim()) rowError += 'Email is missing. ';
       else if (!/\S+@\S+\.\S+/.test(lead.email)) rowError += 'Invalid Email format. ';
       
       if(lead.status && !LEAD_STATUS_OPTIONS.includes(lead.status as LeadStatus)) {
         rowError += `Invalid Status: '${lead.status}'. Valid statuses: ${LEAD_STATUS_OPTIONS.join(', ')}. Will default to 'New'. `;
-        lead.status = LeadStatus.NEW; // Correct invalid status to default
+        lead.status = LeadStatus.NEW; 
       } else if (!lead.status) {
-        lead.status = LeadStatus.NEW; // Default status if not provided
+        lead.status = LeadStatus.NEW; 
       }
 
-      if (rowError.includes('missing') || rowError.includes('Invalid Email format')) { // Only critical errors prevent processing
+      if (rowError.includes('missing') || rowError.includes('Invalid Email format')) { 
         tempErrorRows.push({ row: rowArray, error: rowError.trim() });
       } else {
         if(rowError) console.warn(`Row ${rowIndex+1} (Lead: ${lead.name || 'Unknown'}) has correctable warnings: ${rowError.trim()}`);

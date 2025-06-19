@@ -162,8 +162,11 @@ export const ProductsPage: React.FC = () => {
         refreshProductsData();
     } catch(error) {
         console.error("Error saving product:", error);
-        setIsDataLoading(false); 
+        // Error is re-thrown by modal onSave prop, so modal can display it.
+        // Page's isDataLoading will be handled by finally.
         throw error; 
+    } finally {
+        setIsDataLoading(false);
     }
   };
 
